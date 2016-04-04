@@ -1,0 +1,38 @@
+#!/bin/bash
+
+#PBS -N miseq_sync
+#PBS -j oe
+#PBS -l nodes=1:ppn=1,walltime=08:00:00
+#PBS -m abe
+
+# Print all commands
+#set -v
+
+# Use latest run path if not specified
+if [ -z "$runpath" ]
+then
+	runpath=$(dirname $(dirname $(dirname $(dirname $(ls -dtr /media/VD_Research/TMPDIR/RUNS/*/Data/Intensities/BaseCalls/SampleSheet.csv | tail -1)))))
+fi
+
+runname=$(basename $runpath)
+echo "Latest run is:"
+echo $runpath
+
+if [ -z "$PBS_O_WORKDIR" ]
+then
+	exit
+fi
+cd $PBS_O_WORKDIR
+module load ngs_mapper/ngs_mapper-1.3.0
+
+umask 0022
+echo $runpath
+miseq_sync $runpath
+
+module load fastqc
+
+syncpath=/media/VD_Research/NGSData/RawData/MiSeq/${runname}
+cmd="$HOME/miseqreport.py $runpath ${syncpath}/fastqc_output $PBS_NP $TMPDIR"
+echo $cmd
+$cmd
+mv *.csv *.csv.html ${syncpath}/

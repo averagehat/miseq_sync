@@ -1,0 +1,18 @@
+language: python
+python:
+  - "2.6"
+  - "2.7"
+  - "3.4"
+install: 
+    - pip install -r requirements.txt
+    - pip install -r tests/requirements-dev.txt
+    - if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then pip install unittest2; fi
+    - if [[ $TRAVIS_PYTHON_VERSION == '3.4' ]]; then pip install robotframework-python3; else pip install robotframework; fi
+    - python setup.py install
+before_script:
+    - export PATH=$PATH:$PWD/bin
+script: 
+    - nosetests --with-coverage --cover-erase --cover-package=miseq_sync 
+    - pybot tests/robot.txt
+after_success:
+    - coveralls
