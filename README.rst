@@ -1,5 +1,9 @@
 miseq_sync
 ===============
+
+.. image:: https://badges.gitter.im/VDBWRAIR/miseq_sync.svg
+   :alt: Join the chat at https://gitter.im/VDBWRAIR/miseq_sync
+   :target: https://gitter.im/VDBWRAIR/miseq_sync?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 .. image:: https://readthedocs.org/projects/python-template/badge/?version=latest
     :target: http://python-template.readthedocs.org/en/latest/
     :alt: Documentation Status
