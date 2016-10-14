@@ -1,9 +1,11 @@
 import pandas as pd
 from redmine import Redmine
+import sh
 from path import Path
 import argparse
 from datetime import date
-
+import sys
+#NOTE: ngsdir is really miseqdir
 '''
 Given: Run name, Issue ID
   State of: sync PBS job was just run
@@ -97,18 +99,22 @@ def sample_sheet_to_df(filename): # -> pd.DataFrame
   filehandle.close()
   return pd.read_csv(meta_info_striped)
 
-def get_readdata_fastqs(ngsdir, runname, prefix): # -> [Path]
-  readdata = ngsdir / 'ReadData' / runname
+def get_readdata_fastqs(readdata, runname, prefix): # -> [Path]
   matches = readdata.glob('{}*.fastq'.format(prefix))
   return map(Path, matches)
 
-def rename_readdata_fastqs(ngsdir, runname, sample): # -> None
-  matches = get_readdata_fastqs(ngsdir, runname, sample.subject)
-  for match in matches:
-    new_basename = Path(match.basename().replace(sample.subject, str(sample.id)))
+def rename_issue_date(path, sample): # -> str
+    new_basename = Path(path.basename().replace(sample.subject, str(sample.id)))
     today = date.isoformat().replace('-','_')
-    new_basename = "{}_{}.fastq".format(new_basename.stripext(), today)
-    match.rename(readdata / new_basename)
+    return "{}_{}.fastq".format(new_basename.stripext(), today)
+
+def rename_readdata_fastqs(ngsdir, runname, sample): # -> None
+  readdata = ngsdir / 'ReadData' / runname
+  matches = get_readdata_fastqs(readdata, runname, sample.subject)
+  for match in matches:
+    #match.rename(readdata / new_basename)
+    new_basename = rename_issue_date(match, sample)
+    sh.mv(match, readdata / new_basename)
 
 ### Main, Error-handling
 def execute(R, ngsdir, runID): # -> None
@@ -133,11 +139,11 @@ def execute(R, ngsdir, runID): # -> None
   for sample in old_matches + new_matches:
     for oldfile in get_readdata_fastqs(ngsdir, runname, sample.id):
       newfile = sample_dir(sample) / oldfile.basename()
-      sh.ln(s=True, oldfile, newfile)
+      sh.ln(oldfile, newfile, s=True)
   set_status(run, 'Completed')
   run.save()
 
-def parse_args(syargs):
+def parse_args(sysargs):
     parser = argparse.ArgumentParser()
     parser.add_argument('--key', required=True)
     parser.add_argument('--url', required=True)
@@ -146,7 +152,7 @@ def parse_args(syargs):
     return parser.parse_args(sysargs)
 
 def main():
-    args = parse_args(sysargs)
+    args = parse_args(sys.argv[1:])
     R = Redmine(url=args.url, key=args.key)
     execute(R, args.ngsdir, args.runissue)
     return 0
