@@ -66,6 +66,9 @@ def set_status(runIssue, statusname): # -> None
 def cf(issue, fname): # -> str
   return [d['value'] for d in issue.custom_fields.resources if d['name'] == fname][0]
 
+def new_sample(R, sampleName):
+    samples_id = R.project.get('samples').id
+    return R.issue.create(project_id=samples_id, subject=sampleName)
 
 def relate_samples(R, ss, run): # -> ([Sample, Sample])
   old_matches, new_matches = [], []
