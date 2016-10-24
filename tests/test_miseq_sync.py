@@ -66,10 +66,10 @@ mock_R.project.get.return_value = run_ret
 miseq_sync.sh = mock.MagicMock()
 # miseq_sync.new_sample.return
 @st.composite
-def samples_strat():
-  _sample_strat = st.tuples(st.text(), st.integers()).map(lambda x: Sample(*x))
-  old_samples = st.lists(sample_strat, max_size=10, unique_by=lambda x: x.id)
-  new_samples = st.lists(sample_strat, max_size=10, unique_by=lambda x: x.id)
+def samples_strat(draw):
+  sample_strat = st.tuples(st.text(), st.integers()).map(lambda x: Sample(*x))
+  old_samples = draw(st.lists(sample_strat, max_size=10, unique_by=lambda x: x.id))
+  new_samples = draw(st.lists(sample_strat, max_size=10, unique_by=lambda x: x.id))
   assume(len(set([s.id for s in (old_samples + new_samples)])) == len(old_samples + new_samples))
   return old_samples, new_samples
 
