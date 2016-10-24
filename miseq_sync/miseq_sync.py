@@ -136,7 +136,7 @@ def execute(R, ngsdir, runID): # -> None
   for sample in old_matches + new_matches:
     rename_readdata_fastqs(ngsdir, runname, sample)
   # Link everything to ReadsBySample
-  def sample_dir(sample): ngsdir / 'ReadsBySample' / str(sample.id)
+  def sample_dir(sample): return ngsdir / 'ReadsBySample' / str(sample.id)
   for newSample in new_matches:
     sh.mkdir(sample_dir(newSample))
   for sample in old_matches + new_matches:
