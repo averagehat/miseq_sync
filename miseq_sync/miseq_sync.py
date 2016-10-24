@@ -128,7 +128,7 @@ def execute(R, ngsdir, runID): # -> None
   ss = sample_sheet_to_df(ss_filename)
 #  if ss.Sample_Name.empty:
 #    raise ValueError("Sample Names missing from file {}".format(ss_filename))
-  if len(ss.Sample_Name) != len(ss.Sample_ID) or ss.Sample_Name.empty:
+  if df.isnull().values.any() or ss.Sample_Name.empty:
     raise ValueError("Sample Names or Sample IDs missing from file {}".format(ss_filename))
   if not verify_sample_list(ss, run):
     raise ValueError("Sample List did not match Sample Sheet.")
