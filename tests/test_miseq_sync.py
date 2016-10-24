@@ -6,7 +6,7 @@ from pytest_mock import mocker
 from hypothesis import strategies as st
 from hypothesis import given, assume
 from collections import namedtuple
-import miseq_sync
+from miseq_sync import miseq_sync
 samplesheet_text = '''
 [Reads]
 251
@@ -21,6 +21,7 @@ Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,ind
 #sh.mkdir(readdata)
 #sh.mkdir(ngsdir / 'ReadsBySample')
 #TODO: mock sample_sheet_to_df or open
+'''
 ngsdir = Path("NGSDIR/MiSeq")
 ss_filename = ngsdir / 'RawData' / runname / 'SampleSheet.csv'
 def make_ss_to_df(samples):
@@ -46,21 +47,38 @@ for id, fastqs in issue2fastqs.items():
         sh.ln.assert_called_with(runfolder / fq, dest, s=True)
     assert sh.ln.call_count == len(flatten(issue2fastqs.values()))
 Sample = namedtuple('Sample', ['subject', 'id'])
-sample_strat = st.tuples(st.text(), st.integers()).map(lambda x: Sample(*x))
-miseq_sync.Redmine = mock.MagickMock()
+miseq_sync.Redmine = mock.MagicMock()
 miseq_sync.Redmine.return_value = mock_R
 miseq_sync.cf = lambda x,k: x.cfs[k]
-mock_run = mock.MagickMock(cfs=[{'Run Name' : runname, 'SampleList' : samplelist}], id=runid)
+mock_run = mock.MagicMock(cfs=[{'Run Name' : runname, 'SampleList' : samplelist}], id=runid)
 mock_R.issue.filter.return_value = old_samples
 
+# old samples (names, ids)
+# new samples (names, ids)
+# run name
+# sample list (old and new sample names)
+old_samples = st.lists(sample_strat, max_size=20)
+new_samples = st.lists(sample_strat, max_size=20)
 # some way to test set_status
 run_ret = mock.MagicMock()
 run_ret.issues.get.return_value = mock_run
 mock_R.project.get.return_value = run_ret
 miseq_sync.sh = mock.MagicMock()
 # miseq_sync.new_sample.return
+@st.composite
+def samples_strat():
+  _sample_strat = st.tuples(st.text(), st.integers()).map(lambda x: Sample(*x))
+  old_samples = st.lists(sample_strat, max_size=10, unique_by=lambda x: x.id)
+  new_samples = st.lists(sample_strat, max_size=10, unique_by=lambda x: x.id)
+  assume(len(set([s.id for s in (old_samples + new_samples)])) == len(old_samples + new_samples))
+  return old_samples, new_samples
+
+
+'''
+miseq_sync.sh = mock.MagicMock()
+
 def run_sh_ln(path):
-  sh.ln(path)
+  miseq_sync.sh.ln(path)
 
 def test_mock_sh(mocker):
   #sh = mocker.patch('sh')
@@ -68,4 +86,3 @@ def test_mock_sh(mocker):
   run_sh_ln(path)
   miseq_sync.sh.ln.assert_called_with(path)
 
-# sh = mock.MagickMock()
