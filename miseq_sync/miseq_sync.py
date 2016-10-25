@@ -57,7 +57,7 @@ def set_status(runIssue, statusname): # -> None
           break
   # Ensure it is a valid status
   if _status is None or statusname not in valid_statuses:
-      raise InvalidStatus("{0} is an invalid status".format(statusname))
+      raise ValueError("{0} is an invalid redmine status".format(statusname))
   # set the status_id of this resource
   runIssue.status_id = _status.id
   runIssue.__dict__['_attributes']['status']['id'] = _status['id']
@@ -78,7 +78,7 @@ def relate_samples(R, ss, run): # -> ([Sample, Sample])
       raise ValueError("Multiple issues with name {}".format(sampleName))
     old_matches += existing
     if not existing:
-      new_matches += [ new_sample(sampleName) ]
+      new_matches += [ new_sample(R, sampleName) ]
   for sample in old_matches + new_matches:
     R.issue_relation.create(relation_type='blocks', issue_id=run.id, to_id=sample.id)
   return old_matches, new_matches
@@ -92,6 +92,7 @@ def verify_sample_list(ss, run): # -> Bool
     run.assigned_to_id = run.author.id
     set_status(run, "Error")
     run.save()
+    raise ValueError(run.notes)
   return sampleList == ss.Sample_Name.values.tolist()
 
 ### Filesystem Functions
@@ -102,7 +103,8 @@ def sample_sheet_to_df(filename): # -> pd.DataFrame
   filehandle.close()
   return pd.read_csv(meta_info_striped)
 
-def get_readdata_fastqs(readdata, runname, prefix): # -> [Path]
+def get_readdata_fastqs(readdata, prefix): # -> [Path]
+  #matches = readdata.glob('{}*.fastq'.format(prefix))
   matches = readdata.glob('{}*.fastq'.format(prefix))
   return map(Path, matches)
 
@@ -111,9 +113,8 @@ def rename_issue_date(path, sample): # -> str
     today = date.today().isoformat().replace('-','_')
     return "{}_{}.fastq".format(new_basename.stripext(), today)
 
-def rename_readdata_fastqs(ngsdir, runname, sample): # -> None
-  readdata = ngsdir / 'ReadData' / runname
-  matches = get_readdata_fastqs(readdata, runname, sample.subject)
+def rename_readdata_fastqs(readdata, sample): # -> None
+  matches = get_readdata_fastqs(readdata, sample.subject)
   for match in matches:
     #match.rename(readdata / new_basename)
     new_basename = rename_issue_date(match, sample)
@@ -125,6 +126,7 @@ def execute(R, ngsdir, runID): # -> None
   runname = cf(run, 'Run Name')
   #TODO: assert run name is non-empty
   ss_filename = ngsdir / 'RawData' / runname / 'SampleSheet.csv'
+  readdata = ngsdir / 'ReadData' / runname
   ss = sample_sheet_to_df(ss_filename)
 #  if ss.Sample_Name.empty:
 #    raise ValueError("Sample Names missing from file {}".format(ss_filename))
@@ -134,13 +136,13 @@ def execute(R, ngsdir, runID): # -> None
     raise ValueError("Sample List did not match Sample Sheet.")
   old_matches, new_matches = relate_samples(R, ss, run)
   for sample in old_matches + new_matches:
-    rename_readdata_fastqs(ngsdir, runname, sample)
+    rename_readdata_fastqs(readdata, sample)
   # Link everything to ReadsBySample
   def sample_dir(sample): return ngsdir / 'ReadsBySample' / str(sample.id)
   for newSample in new_matches:
     sh.mkdir(sample_dir(newSample))
   for sample in old_matches + new_matches:
-    for oldfile in get_readdata_fastqs(ngsdir, runname, sample.id):
+    for oldfile in get_readdata_fastqs(readdata, sample.id):
       newfile = sample_dir(sample) / oldfile.basename()
       sh.ln(oldfile, newfile, s=True)
   set_status(run, 'Completed')
