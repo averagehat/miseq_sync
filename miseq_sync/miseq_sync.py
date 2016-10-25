@@ -108,7 +108,7 @@ def get_readdata_fastqs(readdata, runname, prefix): # -> [Path]
 
 def rename_issue_date(path, sample): # -> str
     new_basename = Path(path.basename().replace(sample.subject, str(sample.id)))
-    today = date.isoformat().replace('-','_')
+    today = date.today().isoformat().replace('-','_')
     return "{}_{}.fastq".format(new_basename.stripext(), today)
 
 def rename_readdata_fastqs(ngsdir, runname, sample): # -> None
@@ -128,7 +128,7 @@ def execute(R, ngsdir, runID): # -> None
   ss = sample_sheet_to_df(ss_filename)
 #  if ss.Sample_Name.empty:
 #    raise ValueError("Sample Names missing from file {}".format(ss_filename))
-  if df.isnull().values.any() or ss.Sample_Name.empty:
+  if ss.isnull().values.any() or ss.Sample_Name.empty:
     raise ValueError("Sample Names or Sample IDs missing from file {}".format(ss_filename))
   if not verify_sample_list(ss, run):
     raise ValueError("Sample List did not match Sample Sheet.")
